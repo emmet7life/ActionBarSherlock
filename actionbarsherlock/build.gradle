@@ -1,4 +1,11 @@
 apply plugin: 'android-library'
+apply plugin: 'maven'
+
+
+group = 'com.novoda'
+version = '4.3.2'
+ext.packaging = 'aar'
+
 
 dependencies {
   compile 'com.google.android:support-v4:r7'
@@ -15,4 +22,64 @@ android {
       res.srcDirs = ['res']
     }
   }
+}
+
+
+def isDevBuild
+def isCiBuild
+def isReleaseBuild
+
+def sonatypeRepositoryUrl
+
+if(hasProperty("release")) {
+    isReleaseBuild = true
+    sonatypeRepositoryUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+} else if (hasProperty("ci")) {
+    isCiBuild = true
+    version += "-SNAPSHOT"
+    sonatypeRepositoryUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+} else {
+    isDevBuild = true
+}
+
+uploadArchives {
+    repositories {
+        if (isDevBuild) {
+            mavenLocal()
+        }
+        else {
+            mavenDeployer {
+
+                if(isReleaseBuild) {
+                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+                }
+
+                repository(url: sonatypeRepositoryUrl) {
+                  authentication(userName: sonatypeUsername, password: sonatypePassword)
+                }
+
+                pom.project {
+                   name 'actionbarsherlock'
+                   packaging 'aar'
+                   description 'sonatype release of abs'
+                   url 'http://github.com/novoda/actionbarsherlock'
+
+                   licenses {
+                       license {
+                           name 'The Apache Software License, Version 2.0'
+                           url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                           distribution 'repo'
+                       }
+                   }
+
+                   developers {
+                       developer {
+                           id 'charroch'
+                           name 'Carl-Gustaf Harroch'
+                       }
+                   }
+               }
+            }
+        }
+    }
 }
